@@ -5,8 +5,10 @@ certifi==2024.2.2
 charset-normalizer==3.3.2
 dj-database-url==2.1.0
 Django==5.0.4
+gunicorn==21.2.0
 idna==3.6
 numpy==1.26.4
+packaging==24.0
 pandas==2.2.1
 pandas_ta==0.3.14b0
 psycopg2==2.9.9
