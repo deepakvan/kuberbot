@@ -158,7 +158,7 @@ def get_qty_precision(client, symbol):
         if elem['symbol'] == symbol:
             return elem['quantityPrecision']
 
-def remove_pending_orders(client):
+def remove_pending_orders_repeated(client):
     print("----Removing Pending Orders ")
     models.BotLogs(description="----Removing Pending Orders").save()
     while True:
@@ -166,14 +166,16 @@ def remove_pending_orders(client):
             pos = get_pos(client)
             #print(f'You have {len(pos)} opened positions:\n{pos}')
             if len(pos) == 0:
+                sleep(10)
                 ord = check_orders(client)
                 # print(ord)
                 # removing stop orders for closed positions
                 for elem in ord:
                     if not elem in pos:
                         print(elem, "order removed by pending order close function")
+                        sleep(1)
                         close_open_orders(client, elem)
-            sleep(10)
+            sleep(60)
         except ClientError as error:
             print(
                 "----Removing Pending Orders  Found error. status: {}, error code: {}, error message: {}".format(
@@ -183,10 +185,15 @@ def remove_pending_orders(client):
             models.BotLogs(description="----Removing Pending Orders  Found error. status: {}, error code: {}, error message: {}".format(
                     error.status_code, error.error_code, error.error_message
                 )).save()
+            sleep(60)
+            continue
         except:
             models.BotLogs(description="----Error in Removing Pending Orders ").save()
-            sleep(10)
+            sleep(60)
             continue
+
+
+
 
 
 def modify_sl_from_previous_candle(client, order_details, qty):

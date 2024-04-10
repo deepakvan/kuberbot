@@ -29,7 +29,7 @@ def bot():
     orders = 0
     symbol = ''
 
-    threading.Thread(target=hf.remove_pending_orders, args=(client,)).start()
+    threading.Thread(target=hf.remove_pending_orders_repeated, args=(client,)).start()
     while True:
         try:
             minutes = datetime.datetime.now().minute
