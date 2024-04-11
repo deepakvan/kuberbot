@@ -669,13 +669,13 @@ def monitor_signal(client,signal_list,coinpair_list):
                         leverage = 3
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
-                            leverage = obj.leverage
+                            leverage = int(obj.leverage)
                         set_leverage(client, signal[0], leverage) #+loss_count
                         #print("leverage set")
                         volume=4
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
-                            volume = obj.volume
+                            volume = int(obj.volume)
                         amount=volume*leverage #(+loss_count)
                         #print("amount to be invested ",amount)
                         #sleep(1)
