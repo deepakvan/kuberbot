@@ -610,11 +610,21 @@ def recent_loss_count(client,coinpair_list):
 
 def monitor_signal(client,signal_list,coinpair_list):
     print("----Monitor Signal")
+    isOrderPlaced=False
     models.BotLogs(description="----Monitor Signal").save()
     if len(signal_list)==0:
         print("no signal")
         models.BotLogs(description="no signal").save()
         return None
+    pos = get_pos(client)
+    if len(pos) != 0:
+        return None
+    ord = check_orders(client)
+    # print("old orders ",ord)
+    # removing stop orders for closed positions
+    for elem in ord:
+        if not elem in pos:
+            close_open_orders(client, elem)
     #loss_count = recent_loss_count(client,coinpair_list)
     #print("recent losses",loss_count)
     for signal in signal_list:
@@ -628,19 +638,12 @@ def monitor_signal(client,signal_list,coinpair_list):
 
     while True:
         try:
-            pos = get_pos(client)
-            if len(pos) != 0:
-                break
             minutes = datetime.datetime.now().minute
             seconds = datetime.datetime.now().second
             if minutes % 15 == 14 and seconds>=30 :
                 break
-            ord = check_orders(client)
-            #print("old orders ",ord)
-            # removing stop orders for closed positions
-            for elem in ord:
-                if not elem in pos:
-                    close_open_orders(client, elem)
+            if isOrderPlaced:
+                break
             for signal in signal_list:
                 #print(signal)
                 #df = fetch_historical_data(client, signal[0], '5m', 1)
@@ -680,6 +683,7 @@ def monitor_signal(client,signal_list,coinpair_list):
                         place_order(client,signal,amount)
                         print("order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage))
                         models.BotLogs(description="order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage)).save()
+                        isOrderPlaced=True
                         break
 
                 elif signal[1]['side'] == 'buy':
@@ -711,6 +715,7 @@ def monitor_signal(client,signal_list,coinpair_list):
                         models.BotLogs(
                             description="order placed for {0} and total money invested {1}, leverage {2} ".format(
                                 signal[0], amount, leverage)).save()
+                        isOrderPlaced = True
                         break
 
                 sleep(1)
