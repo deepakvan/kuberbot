@@ -163,10 +163,13 @@ def remove_pending_orders_repeated(client):
     models.BotLogs(description="----Removing Pending Orders").save()
     while True:
         try:
+            minutes = datetime.datetime.now().minute
+            if minutes % 15 == 0:
+                sleep(60)
             pos = get_pos(client)
             #print(f'You have {len(pos)} opened positions:\n{pos}')
             if len(pos) == 0:
-                sleep(10)
+                #sleep(10)
                 ord = check_orders(client)
                 # print(ord)
                 # removing stop orders for closed positions
