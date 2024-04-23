@@ -12,6 +12,14 @@ volume = 4  # volume for one order (if its 10 and leverage is 10, then you put 1
 leverage = 3      # total usdt is 5*2=10 usdt
 order_type = 'ISOLATED'  # type is 'ISOLATED' or 'CROSS'
 
+def round_with_padding(value, round_digits):
+    value_str = str(value)
+    if '.' not in value_str:
+        return value_str
+    split_value_str = value_str.split('.')
+    zeros = (round_digits - len(split_value_str[1]))*'0' if len(split_value_str[1])<round_digits else ''
+    new_value = split_value_str[0] + '.' + split_value_str[1][:round_digits] + zeros
+    return new_value
 
 def increase_decimal_by_1(number):
     # Convert the number to a string to handle trailing zeros and precision
@@ -196,9 +204,6 @@ def remove_pending_orders_repeated(client):
             continue
 
 
-
-
-
 def modify_sl_from_previous_candle(client, order_details, qty):
     print("----Modify Stoploss ")
     models.BotLogs(description=f'----Modify Stoploss').save()
@@ -348,17 +353,19 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = decrease_decimal_by_1(round(signal[1]['SL'], price_precision))
-            resp2 = client.new_order(symbol=symbol, side='SELL', type='STOP_MARKET', quantity=qty, timeInForce='GTC',
-                                     stopPrice=sl_price,closePosition=True)
+            sl_price = decrease_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
+            sl_price_trigger = increase_decimal_by_1(sl_price)
+            resp2 = client.new_order(symbol=symbol, side='SELL', type='STOP', quantity=qty, timeInForce='GTC',
+                                     stopPrice=sl_price_trigger, price=sl_price) #closePosition=True)
             print(resp2)
             models.BotOrders(order_id=str(resp2['orderId']), order_details=str(resp2)).save()
             models.BotLogs(description=f'{str(resp2)}').save()
             #threading.Thread(target=modify_sl, args=(client, resp2, qty)).start()
             sleep(2)
             tp_price = round(signal[1]['TP'], price_precision)
-            resp3 = client.new_order(symbol=symbol, side='SELL', type='TAKE_PROFIT_MARKET', quantity=qty, timeInForce='GTC',
-                                     stopPrice=tp_price,closePosition=True)
+            tp_price_trigger = decrease_decimal_by_1(tp_price)
+            resp3 = client.new_order(symbol=symbol, side='SELL', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
+                                     stopPrice=tp_price_trigger, price=tp_price) #closePosition=True)
             print(resp3)
             models.BotOrders(order_id=str(resp3['orderId']), order_details=str(resp3)).save()
             models.BotLogs(description=f'{str(resp3)}').save()
@@ -380,17 +387,20 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = increase_decimal_by_1(round(signal[1]['SL'], price_precision))
-            resp2 = client.new_order(symbol=symbol, side='BUY', type='STOP_MARKET', quantity=qty, timeInForce='GTC',
-                                     stopPrice=sl_price,closePosition=True) #, workingType="CONTRACT_PRICE" or MARK_PRICE
+            sl_price = increase_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
+            sl_price_trigger = decrease_decimal_by_1(sl_price)
+            resp2 = client.new_order(symbol=symbol, side='BUY', type='STOP', quantity=qty, timeInForce='GTC',
+                                     stopPrice=sl_price_trigger, price=sl_price)#closePosition=True)
+            # #, workingType="CONTRACT_PRICE" or MARK_PRICE
             print(resp2)
             models.BotOrders(order_id=str(resp2['orderId']), order_details=str(resp2)).save()
             models.BotLogs(description=f'{str(resp2)}').save()
             #threading.Thread(target=modify_sl, args=(client, resp2, qty)).start()
             sleep(2)
             tp_price = round(signal[1]['TP'], price_precision)
-            resp3 = client.new_order(symbol=symbol, side='BUY', type='TAKE_PROFIT_MARKET', quantity=qty, timeInForce='GTC',
-                                     stopPrice=tp_price,closePosition=True)
+            tp_price_trigger = increase_decimal_by_1(tp_price)
+            resp3 = client.new_order(symbol=symbol, side='BUY', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
+                                     stopPrice=tp_price_trigger,price=tp_price) #closePosition=True)
             print(resp3)
             models.BotOrders(order_id=str(resp3['orderId']), order_details=str(resp3)).save()
             models.BotLogs(description=f'{str(resp3)}').save()
@@ -552,7 +562,12 @@ def get_signal(df):
         BUY_PRICE = df['low']
         SL = df['high']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
         TP = BUY_PRICE - SLTPRatio * (SL - BUY_PRICE)
-        trade = {"side": 'sell', "BUY_PRICE": BUY_PRICE, "SL": SL, "TP": TP}
+        last_buy_price = BUY_PRICE - ((BUY_PRICE - TP) * 0.2)
+        trade = {"side": 'sell',
+                 "BUY_PRICE": BUY_PRICE,
+                 "last_buy_price": last_buy_price,
+                 "SL": SL,
+                 "TP": TP}
         # print(trade)
         return trade
 
@@ -563,11 +578,14 @@ def get_signal(df):
         BUY_PRICE = df['high']
         SL = df['low']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
         TP = BUY_PRICE + SLTPRatio * (BUY_PRICE - SL)
-        trade = {"side": 'buy', "BUY_PRICE": BUY_PRICE, "SL": SL, "TP": TP}
+        last_buy_price = BUY_PRICE + ((TP - BUY_PRICE) * 0.2)
+        trade = {"side": 'buy',
+                 "BUY_PRICE": BUY_PRICE,
+                 "last_buy_price": last_buy_price,
+                 "SL": SL,
+                 "TP": TP}
         # print(trade)
         return trade
-
-
 
     return None
 
@@ -630,14 +648,14 @@ def monitor_signal(client,signal_list,coinpair_list):
             close_open_orders(client, elem)
     #loss_count = recent_loss_count(client,coinpair_list)
     #print("recent losses",loss_count)
-    for signal in signal_list:
-        print(signal)
-        if signal[1]['side'] == 'sell':
-            signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] - ((signal[1]['BUY_PRICE'] - signal[1]['TP']) * 0.2)
-            print("last buy price is :- ", signal)
-        elif signal[1]['side'] == 'buy':
-            signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] + ((signal[1]['TP'] - signal[1]['BUY_PRICE']) * 0.2)
-            print("last buy price is :- ", signal)
+    # for signal in signal_list:
+    #     print(signal)
+    #     if signal[1]['side'] == 'sell':
+    #         signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] - ((signal[1]['BUY_PRICE'] - signal[1]['TP']) * 0.2)
+    #         print("last buy price is :- ", signal)
+    #     elif signal[1]['side'] == 'buy':
+    #         signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] + ((signal[1]['TP'] - signal[1]['BUY_PRICE']) * 0.2)
+    #         print("last buy price is :- ", signal)
 
     while True:
         try:
