@@ -355,6 +355,7 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             sleep(2)
             sl_price = decrease_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
             sl_price_trigger = increase_decimal_by_1(sl_price)
+            print("stop loss price in buy order  - ", sl_price,sl_price_trigger)
             resp2 = client.new_order(symbol=symbol, side='SELL', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price) #closePosition=True)
             print(resp2)
@@ -364,6 +365,7 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             sleep(2)
             tp_price = round(signal[1]['TP'], price_precision)
             tp_price_trigger = decrease_decimal_by_1(tp_price)
+            print("tp price in buy order  - ", tp_price, tp_price_trigger)
             resp3 = client.new_order(symbol=symbol, side='SELL', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
                                      stopPrice=tp_price_trigger, price=tp_price) #closePosition=True)
             print(resp3)
@@ -389,6 +391,7 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             sleep(2)
             sl_price = increase_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
             sl_price_trigger = decrease_decimal_by_1(sl_price)
+            print("stop loss price in sell order  - ", sl_price, sl_price_trigger)
             resp2 = client.new_order(symbol=symbol, side='BUY', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price)#closePosition=True)
             # #, workingType="CONTRACT_PRICE" or MARK_PRICE
@@ -399,6 +402,7 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             sleep(2)
             tp_price = round(signal[1]['TP'], price_precision)
             tp_price_trigger = increase_decimal_by_1(tp_price)
+            print("tp price in sell order  - ", tp_price, tp_price_trigger)
             resp3 = client.new_order(symbol=symbol, side='BUY', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
                                      stopPrice=tp_price_trigger,price=tp_price) #closePosition=True)
             print(resp3)
