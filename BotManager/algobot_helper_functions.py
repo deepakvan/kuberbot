@@ -353,9 +353,11 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = decrease_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
+            sl_price = decrease_decimal_by_1(round(signal[1]['SL'], price_precision))
             sl_price_trigger = increase_decimal_by_1(sl_price)
-            print("stop loss price in buy order  - ", sl_price,sl_price_trigger)
+            print("stop loss price in buy order  - ",
+                  decrease_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision)),sl_price,
+                  sl_price_trigger)
             resp2 = client.new_order(symbol=symbol, side='SELL', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price) #closePosition=True)
             print(resp2)
@@ -389,9 +391,10 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = increase_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision))
+            sl_price = increase_decimal_by_1(round(signal[1]['SL'], price_precision))
             sl_price_trigger = decrease_decimal_by_1(sl_price)
-            print("stop loss price in sell order  - ", sl_price, sl_price_trigger)
+            print("stop loss price in sell order  - ",
+                  increase_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision)),sl_price, sl_price_trigger)
             resp2 = client.new_order(symbol=symbol, side='BUY', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price)#closePosition=True)
             # #, workingType="CONTRACT_PRICE" or MARK_PRICE
