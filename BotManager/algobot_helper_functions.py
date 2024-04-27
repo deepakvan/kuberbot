@@ -502,7 +502,8 @@ def close_open_orders(client,symbol):
             )).save()
 
 
-def calculate_incr(ema_data):
+def calculate_incr(df):
+    ema_data=df['ema5'].tolist()
     incr_data = []
     incr_data.append(0)
     for i in range(1,len(ema_data)):
@@ -519,9 +520,9 @@ def get_signal(df):
     #print("inside get signal")
     #print(df)
     df['ema5'] = ta.ema(df['close'], 5)
-    df['incr'] = calculate_incr(df['ema5'])
+    df['incr'] = calculate_incr(df)
     df = df.iloc[-2, :]
-
+    print(df)
     # supertrend = ta.supertrend(df['high'], df['low'], df['close'], 30, 2.5)
     # trend_directions = supertrend['SUPERTd_30_2.5']
     #
