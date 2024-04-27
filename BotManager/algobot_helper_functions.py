@@ -1,5 +1,6 @@
 import datetime
 import threading
+import math
 from time import sleep
 import pandas_ta as ta
 import pandas as pd
@@ -501,10 +502,24 @@ def close_open_orders(client,symbol):
             )).save()
 
 
+def calculate_incr(ema_data):
+    incr_data = []
+    incr_data.append(0)
+    for i in range(1,len(ema_data)):
+        if math.isnan(ema_data[i-1]):
+            incr_data.append(0)
+            continue
+        increase = (( ema_data[i] - ema_data[i-1])/ema_data[i-1]) * 100
+        incr_data.append(increase)
+
+    return incr_data
+
+
 def get_signal(df):
     #print("inside get signal")
     #print(df)
     df['ema5'] = ta.ema(df['close'], 5)
+    df['incr'] = calculate_incr(df['ema5'])
     df = df.iloc[-2, :]
 
     # supertrend = ta.supertrend(df['high'], df['low'], df['close'], 30, 2.5)
@@ -563,8 +578,8 @@ def get_signal(df):
 
     # for short trades
 
-    if isShootingStarTouchingEMA:
-        SLTPRatio = 2  # 1:2
+    if isShootingStarTouchingEMA and df['incr']< -0.1:
+        SLTPRatio = 1.2  # 1:1.2
         # signal = 1
         BUY_PRICE = df['low']
         SL = df['high']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
@@ -579,8 +594,8 @@ def get_signal(df):
         return trade
 
     # for long trade
-    elif isHammerTouchingEMA :  #or isEmaBuy:
-        SLTPRatio = 2  # 1:2
+    elif isHammerTouchingEMA and df['incr']> 0.1:  #or isEmaBuy:
+        SLTPRatio = 1.2  # 1:1.2
         # signal = 1
         BUY_PRICE = df['high']
         SL = df['low']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
@@ -653,8 +668,8 @@ def monitor_signal(client,signal_list,coinpair_list):
     for elem in ord:
         if not elem in pos:
             close_open_orders(client, elem)
-    #loss_count = recent_loss_count(client,coinpair_list)
-    #print("recent losses",loss_count)
+    loss_count = recent_loss_count(client,coinpair_list)
+    print("recent losses",loss_count)
     # for signal in signal_list:
     #     print(signal)
     #     if signal[1]['side'] == 'sell':
@@ -698,13 +713,13 @@ def monitor_signal(client,signal_list,coinpair_list):
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
                             leverage = int(obj.leverage)
-                        set_leverage(client, signal[0], leverage) #+loss_count
+                        set_leverage(client, signal[0], leverage+(loss_count*2)) #
                         #print("leverage set")
                         volume=4
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
                             volume = int(obj.volume)
-                        amount=volume*leverage #(+loss_count)
+                        amount=volume*(leverage +(loss_count*2))#(+loss_count)
                         #print("amount to be invested ",amount)
                         #sleep(1)
                         #print('Placing order for ', signal[0])
