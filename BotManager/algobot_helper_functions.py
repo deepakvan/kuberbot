@@ -553,9 +553,9 @@ def get_signal(df):
         BUY_PRICE = round(df['low']-decimalpoint, price_precision)
         BUY_PRICE_Trigger = round(df['low'], price_precision)
         SL = round(df['high']+decimalpoint, price_precision)
-        SL_Trigger = round(SL-((SL-BUY_PRICE)/2),price_precision)
+        SL_Trigger = SL #round(SL-((SL-BUY_PRICE)/2),price_precision)
         TP = round(BUY_PRICE - SLTPRatio * (SL - BUY_PRICE),price_precision)
-        TP_Trigger = round(TP+((BUY_PRICE-TP)/2),price_precision)
+        TP_Trigger = round(TP+decimalpoint,price_precision) #round(TP+((BUY_PRICE-TP)/2),price_precision)
         last_buy_price = round(BUY_PRICE - ((BUY_PRICE - TP) * 0.2), price_precision)
         trade = {"side": 'sell',
                  "BUY_PRICE": BUY_PRICE, "BUY_PRICE_Trigger":BUY_PRICE_Trigger,
@@ -572,9 +572,9 @@ def get_signal(df):
         BUY_PRICE = round(df['high']+decimalpoint, price_precision) #df['high']
         BUY_PRICE_Trigger = round(df['high'], price_precision)
         SL = round(df['low'] - decimalpoint, price_precision)  #df['low']
-        SL_Trigger = round(SL + ((BUY_PRICE - SL) / 2), price_precision)
+        SL_Trigger = SL  #round(SL + ((BUY_PRICE - SL) / 2), price_precision)
         TP = round(BUY_PRICE + SLTPRatio * (BUY_PRICE - SL),price_precision)
-        TP_Trigger = round(TP - ((TP - BUY_PRICE) / 2), price_precision)
+        TP_Trigger = round(TP - decimalpoint, price_precision)
         last_buy_price = round(BUY_PRICE + ((TP - BUY_PRICE) * 0.2), price_precision)
         trade = {"side": 'buy',
                  "BUY_PRICE": BUY_PRICE, "BUY_PRICE_Trigger":BUY_PRICE_Trigger,
