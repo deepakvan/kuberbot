@@ -113,7 +113,6 @@ def fetch_historical_data(client_obj, symbol, interval='5m',limit=1000):
             )).save()
 
 
-
 # Set leverage for the needed symbol. You need this bcz different symbols can have different leverage
 def set_leverage(client,symbol, level):
     print("----setting Leverage")
@@ -331,7 +330,8 @@ def modify_sl_for_brokrage(client, order_details, qty):
 
 
 # Open new order with the last price, and set TP and SL:
-def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"BUY_PRICE":BUY_PRICE, "SL":SL,"TP":TP}]
+def place_order(client,signal,amount):
+    # signal =['coinpair', {"side":'sell',"BUY_PRICE":BUY_PRICE, "SL":SL,"TP":TP}]
     print("----Placing Orders ")
     models.BotLogs(description=f'----Placing Orders').save()
     print(signal[0])
@@ -341,24 +341,24 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
     #print("current price ",price)
     qty_precision = get_qty_precision(client, symbol)
     #print("qty_precision ", qty_precision)
-    price_precision = get_price_precision(client, symbol)
+    #price_precision = get_price_precision(client, symbol)
     #print("price precision",price_precision)
     qty = round(amount/price, qty_precision)
     #print("qty", qty)
     if signal[1]['side'] == 'buy':
         try:
-            resp1 = client.new_order(symbol=symbol, side='BUY', type='MARKET', quantity=qty)  # price=price, timeInForce='GTC',
+            Limit_price = signal[1]['BUY_PRICE']
+            Limit_price_Trigger = signal[1]['BUY_PRICE_Trigger']
+            resp1 = client.new_order(symbol=symbol, side='BUY', type='MARKET', quantity=qty,)
+            #                         price= Limit_price, stopPrice= Limit_price_Trigger, timeInForce='GTC')
             print(symbol, signal[1]['side'], "placing order")
             models.BotLogs(description=f'{str(symbol)}, {str(signal)} , buy, placing order').save()
             print(resp1)
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = decrease_decimal_by_1(round(signal[1]['SL'], price_precision))
-            sl_price_trigger = increase_decimal_by_1(sl_price)
-            print("stop loss price in buy order  - ",
-                  decrease_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision)),sl_price,
-                  sl_price_trigger)
+            sl_price = signal[1]['SL']
+            sl_price_trigger = signal[1]['SL_Trigger']
             resp2 = client.new_order(symbol=symbol, side='SELL', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price) #closePosition=True)
             print(resp2)
@@ -366,9 +366,8 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotLogs(description=f'{str(resp2)}').save()
             #threading.Thread(target=modify_sl, args=(client, resp2, qty)).start()
             sleep(2)
-            tp_price = round(signal[1]['TP'], price_precision)
-            tp_price_trigger = decrease_decimal_by_1(tp_price)
-            print("tp price in buy order  - ", tp_price, tp_price_trigger)
+            tp_price = signal[1]['TP']
+            tp_price_trigger = signal[1]['TP_Trigger']
             resp3 = client.new_order(symbol=symbol, side='SELL', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
                                      stopPrice=tp_price_trigger, price=tp_price) #closePosition=True)
             print(resp3)
@@ -385,17 +384,18 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
                 )).save()
     if signal[1]['side'] == 'sell':
         try:
-            resp1 = client.new_order(symbol=symbol, side='SELL', type='MARKET', quantity=qty) # price=price,timeInForce='GTC'
+            Limit_price = signal[1]['BUY_PRICE']
+            Limit_price_Trigger = signal[1]['BUY_PRICE_Trigger']
+            resp1 = client.new_order(symbol=symbol, side='SELL', type='MARKET', quantity=qty,)
+            #                         price= Limit_price, stopPrice= Limit_price_Trigger, timeInForce='GTC')
             print(symbol, signal[1]['side'], "placing order")
             models.BotLogs(description=f'{str(symbol)}, {str(signal)} , sell side placing order').save()
             print(resp1)
             models.BotOrders(order_id=str(resp1['orderId']), order_details=str(resp1)).save()
             models.BotLogs(description=f'{str(resp1)}').save()
             sleep(2)
-            sl_price = increase_decimal_by_1(round(signal[1]['SL'], price_precision))
-            sl_price_trigger = decrease_decimal_by_1(sl_price)
-            print("stop loss price in sell order  - ",
-                  increase_decimal_by_1(round_with_padding(signal[1]['SL'], price_precision)),sl_price, sl_price_trigger)
+            sl_price = signal[1]['SL']
+            sl_price_trigger = signal[1]['SL_Trigger']
             resp2 = client.new_order(symbol=symbol, side='BUY', type='STOP', quantity=qty, timeInForce='GTC',
                                      stopPrice=sl_price_trigger, price=sl_price)#closePosition=True)
             # #, workingType="CONTRACT_PRICE" or MARK_PRICE
@@ -404,9 +404,8 @@ def place_order(client,signal,amount):  # signal =['coinpair', {"side":'sell',"B
             models.BotLogs(description=f'{str(resp2)}').save()
             #threading.Thread(target=modify_sl, args=(client, resp2, qty)).start()
             sleep(2)
-            tp_price = round(signal[1]['TP'], price_precision)
-            tp_price_trigger = increase_decimal_by_1(tp_price)
-            print("tp price in sell order  - ", tp_price, tp_price_trigger)
+            tp_price = signal[1]['TP']
+            tp_price_trigger = signal[1]['TP_Trigger']
             resp3 = client.new_order(symbol=symbol, side='BUY', type='TAKE_PROFIT', quantity=qty, timeInForce='GTC',
                                      stopPrice=tp_price_trigger,price=tp_price) #closePosition=True)
             print(resp3)
@@ -523,24 +522,10 @@ def get_signal(df):
     df['incr'] = calculate_incr(df)
     df = df.iloc[-2, :]
     print(df)
-    # supertrend = ta.supertrend(df['high'], df['low'], df['close'], 30, 2.5)
-    # trend_directions = supertrend['SUPERTd_30_2.5']
-    #
-    # df = df.iloc[-2,:]
-    # trend_direction=trend_directions.iloc[-2]
-    # #print(df)
+
     candleHeight = df['high'] - df['low']
     # Calculate 50 % of the candle height
     halfCandleHeight = candleHeight * 0.5
-    #
-    # #Detect candles where open and close are below 50 % of the candle height
-    # isLowOpenClose = (df['open'] < df['low'] + halfCandleHeight) and \
-    #                             (df['close'] < df['low'] + halfCandleHeight) and \
-    #                             trend_direction==-1
-    #
-    # isHighOpenClose = (df['open'] > df['low'] + halfCandleHeight) and \
-    #                  (df['close'] > df['low'] + halfCandleHeight) and \
-    #                   trend_direction==1
 
     isShootingStarTouchingEMA = (df['open'] < df['low'] + halfCandleHeight) and \
                                 (df['close'] < df['low'] + halfCandleHeight) and \
@@ -552,45 +537,31 @@ def get_signal(df):
                           (df['open'] > df['ema5']) and (df['close'] > df['ema5']) and \
                           (df['low'] <= df['ema5'])
 
-    isEmaBuy = df['ema5'] < df['low'] and df['close']< df['open']
+    price_precision = len(str(df['open']).split('.')[1])
+    if len(str(df['high']).split('.')[1]) > price_precision:
+        price_precision = len(str(df['high']).split('.')[1])
+    if len(str(df['low']).split('.')[1]) > price_precision:
+        price_precision = len(str(df['low']).split('.')[1])
+    if len(str(df['close']).split('.')[1]) > price_precision:
+        price_precision = len(str(df['close']).split('.')[1])
 
-
-    # #for short trade
-    # if isLowOpenClose:
-    #     SLTPRatio=1.2
-    #     #signal = 1
-    #     BUY_PRICE = df['low']
-    #     SL = df['high']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
-    #     TP = BUY_PRICE - SLTPRatio * (SL- BUY_PRICE)
-    #     trade = {"side":'sell',"BUY_PRICE":BUY_PRICE, "SL":SL,"TP":TP}
-    #     #print(trade)
-    #     return trade
-    #
-    # # for long trade
-    # elif isHighOpenClose:
-    #     SLTPRatio = 1.2
-    #     # signal = 1
-    #     BUY_PRICE = df['high']
-    #     SL = df['low']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
-    #     TP = BUY_PRICE + SLTPRatio * (BUY_PRICE - SL )
-    #     trade = {"side": 'buy', "BUY_PRICE": BUY_PRICE, "SL": SL, "TP": TP}
-    #     # print(trade)
-    #     return trade
-
-    # for short trades
+    decimalpoint = float('0.'+'0'*(price_precision-1) + '1')
 
     if isShootingStarTouchingEMA and df['incr']< -0.1:
         SLTPRatio = 1.2  # 1:1.2
         # signal = 1
-        BUY_PRICE = df['low']
-        SL = df['high']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
-        TP = BUY_PRICE - SLTPRatio * (SL - BUY_PRICE)
-        last_buy_price = BUY_PRICE - ((BUY_PRICE - TP) * 0.2)
+        BUY_PRICE = round(df['low']-decimalpoint, price_precision)
+        BUY_PRICE_Trigger = round(df['low'], price_precision)
+        SL = round(df['high']+decimalpoint, price_precision)
+        SL_Trigger = round(SL-((SL-BUY_PRICE)/2),price_precision)
+        TP = round(BUY_PRICE - SLTPRatio * (SL - BUY_PRICE),price_precision)
+        TP_Trigger = round(TP+((BUY_PRICE-TP)/2),price_precision)
+        last_buy_price = round(BUY_PRICE - ((BUY_PRICE - TP) * 0.2), price_precision)
         trade = {"side": 'sell',
-                 "BUY_PRICE": BUY_PRICE,
+                 "BUY_PRICE": BUY_PRICE, "BUY_PRICE_Trigger":BUY_PRICE_Trigger,
                  "last_buy_price": last_buy_price,
-                 "SL": SL,
-                 "TP": TP}
+                 "SL": SL, "SL_Trigger":SL_Trigger,
+                 "TP": TP, "TP_Trigger":TP_Trigger}
         # print(trade)
         return trade
 
@@ -598,19 +569,23 @@ def get_signal(df):
     elif isHammerTouchingEMA and df['incr']> 0.1:  #or isEmaBuy:
         SLTPRatio = 1.2  # 1:1.2
         # signal = 1
-        BUY_PRICE = df['high']
-        SL = df['low']  # BUY_PRICE[row]+(df['atr'][row-1]*atrmultiplier)
-        TP = BUY_PRICE + SLTPRatio * (BUY_PRICE - SL)
-        last_buy_price = BUY_PRICE + ((TP - BUY_PRICE) * 0.2)
+        BUY_PRICE = round(df['high']+decimalpoint, price_precision) #df['high']
+        BUY_PRICE_Trigger = round(df['high'], price_precision)
+        SL = round(df['low'] - decimalpoint, price_precision)  #df['low']
+        SL_Trigger = round(SL + ((BUY_PRICE - SL) / 2), price_precision)
+        TP = round(BUY_PRICE + SLTPRatio * (BUY_PRICE - SL),price_precision)
+        TP_Trigger = round(TP - ((TP - BUY_PRICE) / 2), price_precision)
+        last_buy_price = round(BUY_PRICE + ((TP - BUY_PRICE) * 0.2), price_precision)
         trade = {"side": 'buy',
-                 "BUY_PRICE": BUY_PRICE,
+                 "BUY_PRICE": BUY_PRICE, "BUY_PRICE_Trigger":BUY_PRICE_Trigger,
                  "last_buy_price": last_buy_price,
-                 "SL": SL,
-                 "TP": TP}
+                 "SL": SL, "SL_Trigger":SL_Trigger,
+                 "TP": TP, "TP_Trigger":TP_Trigger}
         # print(trade)
         return trade
 
     return None
+
 
 def recent_loss_count(client,coinpair_list):
     print("----Recent Losses")
@@ -652,6 +627,7 @@ def recent_loss_count(client,coinpair_list):
         print("error in recent losses")
     return 0
 
+
 def monitor_signal(client,signal_list,coinpair_list):
     print("----Monitor Signal")
     isOrderPlaced=False
@@ -669,16 +645,8 @@ def monitor_signal(client,signal_list,coinpair_list):
     for elem in ord:
         if not elem in pos:
             close_open_orders(client, elem)
-    loss_count = recent_loss_count(client,coinpair_list)
-    print("recent losses",loss_count)
-    # for signal in signal_list:
-    #     print(signal)
-    #     if signal[1]['side'] == 'sell':
-    #         signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] - ((signal[1]['BUY_PRICE'] - signal[1]['TP']) * 0.2)
-    #         print("last buy price is :- ", signal)
-    #     elif signal[1]['side'] == 'buy':
-    #         signal[1]['last_buy_price'] = signal[1]['BUY_PRICE'] + ((signal[1]['TP'] - signal[1]['BUY_PRICE']) * 0.2)
-    #         print("last buy price is :- ", signal)
+    #loss_count = recent_loss_count(client,coinpair_list)
+    #print("recent losses",loss_count)
 
     while True:
         try:
@@ -690,20 +658,10 @@ def monitor_signal(client,signal_list,coinpair_list):
                 break
             for signal in signal_list:
                 #print(signal)
-                #df = fetch_historical_data(client, signal[0], '5m', 1)
-                #print(df)
-                #print("working point")
                 current_price = float(client.ticker_price(signal[0])['price'])
                 #print("current price from ticker",current_price,type(current_price))
-                # print("pair",signal[0])
-                # print("signal ",signal[1])
-                # print("buy price ", signal[1]['BUY_PRICE'])
-                # print("sl ", signal[1]['SL'])
-                # print("tp ", signal[1]['TP'])
                 #condition for buy or sell then break
                 if signal[1]['side']=='sell':
-                    #last_buy_price=signal[1]['BUY_PRICE'] - ((signal[1]['BUY_PRICE'] - signal[1]['TP'])*0.2)
-                    #print("last buy price is :- ",signal[1]['last_buy_price'])
                     if current_price<signal[1]['BUY_PRICE'] and current_price>signal[1]['last_buy_price']:
                         #place market order order
                         #print("inside sell condition")
@@ -714,15 +672,15 @@ def monitor_signal(client,signal_list,coinpair_list):
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
                             leverage = int(obj.leverage)
-                        set_leverage(client, signal[0], leverage+(loss_count*2)) #
+                            #print("leverage value ",type(leverage),leverage)
+                        set_leverage(client, signal[0], leverage) #+(loss_count*2)
                         #print("leverage set")
                         volume=4
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
                             volume = int(obj.volume)
-                        amount=volume*(leverage +(loss_count*2))#(+loss_count)
+                        amount=volume*leverage #(+loss_count)
                         #print("amount to be invested ",amount)
-                        #sleep(1)
                         #print('Placing order for ', signal[0])
                         place_order(client,signal,amount)
                         print("order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage))
@@ -731,27 +689,21 @@ def monitor_signal(client,signal_list,coinpair_list):
                         break
 
                 elif signal[1]['side'] == 'buy':
-                    #last_buy_price = signal[1]['BUY_PRICE'] + ((signal[1]['TP'] - signal[1]['BUY_PRICE']) * 0.2)
-                    #print("last buy price is :- ", last_buy_price)
                     if current_price > signal[1]['BUY_PRICE'] and current_price < signal[1]['last_buy_price']:
                         # place market order order
                         # print("inside buy condition")
                         set_mode(client, signal[0], order_type)
-                        # print("isolated mode set")
-                        # sleep(1)
                         leverage = 3
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
-                            leverage = obj.leverage
+                            leverage = int(obj.leverage)
                         set_leverage(client, signal[0], leverage ) #+ loss_count
                         # print("leverage set")
                         volume = 4
                         if models.StaticData.objects.exists():
                             obj = models.StaticData.objects.get(static_id=1)
-                            volume = obj.volume
+                            volume = int(obj.volume)
                         amount = volume * leverage #(+ loss_count)
-                        #print("amount to be invested ", amount)
-                        # sleep(1)
                         # print('Placing order for ', signal[0])
                         place_order(client, signal, amount)
                         print("order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],
