@@ -132,7 +132,8 @@ def remove_pending_orders_repeated(client):
                 # print(ord)
                 # removing stop orders for closed positions
                 for elem in ord:
-                    if not elem in pos:
+                    print("---for removing orders ",elem)
+                    if not elem in pos and elem['type'] not in ['MARKET','LIMIT']:
                         print(elem, "order removed by pending order close function")
                         sleep(1)
                         close_open_orders(client, elem)
@@ -162,16 +163,18 @@ def trailing_sl(client, order_details, qty,sl_data):
     while True:
         sleep(5)
         current_price = float(client.ticker_price(order_details['symbol'])['price'])
-        if order_details['side'] == 'BUY' and current_price>=sl_data['Trailing_SL_Condition1']:
+        print("stop loss current price")
+        # stop loss order is reverse of limit order. ex. if buy stoploss order will be sell, if sell stoploss will be buy
+        if order_details['side'] == 'SELL' and current_price>=sl_data['Trailing_SL_Condition1']:
             price_condition=True
-        elif order_details['side'] == 'SELL' and current_price<=sl_data['Trailing_SL_Condition1']:
+        elif order_details['side'] == 'BUY' and current_price<=sl_data['Trailing_SL_Condition1']:
             price_condition = True
         if price_condition:
             try:
                 response = client.get_open_orders(
                     symbol=order_details['symbol'], orderId=int(order_details['orderId']),recvWindow=5000
                 )
-                if response['status']=='FILLED' or  response['status']=='PARTIALLY_FILLED' or response['status']=='CANCELED':
+                if response['status']=='FILLED' or response['status']=='PARTIALLY_FILLED' or response['status']=='CANCELED':
                     break
                 if response['status']=='NEW':
                     client.cancel_order(
