@@ -132,11 +132,11 @@ def remove_pending_orders_repeated(client):
                 # print(ord)
                 # removing stop orders for closed positions
                 for elem in ord:
-                    print("---for removing orders ",elem)
-                    if not elem['symbol'] in pos and elem['type'] not in ['MARKET','LIMIT']:
+                    #print("---for removing orders ",elem)
+                    if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
                         print(elem, "order removed by pending order close function")
                         sleep(1)
-                        close_open_orders(client, elem)
+                        close_open_orders(client, elem['symbol'])
             sleep(60)
         except ClientError as error:
             print(
