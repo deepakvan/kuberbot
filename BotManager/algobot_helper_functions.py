@@ -133,7 +133,7 @@ def remove_pending_orders_repeated(client):
                 # removing stop orders for closed positions
                 for elem in ord:
                     print("---for removing orders ",elem)
-                    if not elem in pos and elem['type'] not in ['MARKET','LIMIT']:
+                    if not elem['symbol'] in pos and elem['type'] not in ['MARKET','LIMIT']:
                         print(elem, "order removed by pending order close function")
                         sleep(1)
                         close_open_orders(client, elem)
@@ -163,7 +163,7 @@ def trailing_sl(client, order_details, qty,sl_data):
     while True:
         sleep(5)
         current_price = float(client.ticker_price(order_details['symbol'])['price'])
-        print("stop loss current price")
+        #print("stop loss current price",current_price)
         # stop loss order is reverse of limit order. ex. if buy stoploss order will be sell, if sell stoploss will be buy
         if order_details['side'] == 'SELL' and current_price>=sl_data['Trailing_SL_Condition1']:
             price_condition=True
@@ -341,7 +341,7 @@ def check_orders(client):
         response = client.get_orders(recvWindow=10000)
         sym = []
         for elem in response:
-            sym.append(elem['symbol'])
+            sym.append(elem)
         #print("working")
         return sym
     except ClientError as error:
@@ -481,8 +481,8 @@ def monitor_signal(client,signal_list,coinpair_list):
     # print("old orders ",ord)
     # removing stop orders for closed positions
     for elem in ord:
-        if not elem in pos:
-            close_open_orders(client, elem)
+        if not elem['symbol'] in pos:
+            close_open_orders(client, elem['symbol'])
     #loss_count = recent_loss_count(client,coinpair_list)
     #print("recent losses",loss_count)
 
