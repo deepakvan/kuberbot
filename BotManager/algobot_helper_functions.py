@@ -485,6 +485,20 @@ def monitor_signal(client,signal_list,coinpair_list):
             close_open_orders(client, elem['symbol'])
     #loss_count = recent_loss_count(client,coinpair_list)
     #print("recent losses",loss_count)
+    leverage = 3
+    volume = 4
+    for signal in signal_list:
+        set_mode(client, signal[0], order_type)
+        # print("isolated mode set")
+        if models.StaticData.objects.exists():
+            obj = models.StaticData.objects.get(static_id=1)
+            leverage = int(obj.leverage)
+            # print("leverage value ",type(leverage),leverage)
+        set_leverage(client, signal[0], leverage)  # +(loss_count*2)
+        # print("leverage set")
+        if models.StaticData.objects.exists():
+            obj = models.StaticData.objects.get(static_id=1)
+            volume = int(obj.volume)
 
     while True:
         try:
@@ -503,23 +517,9 @@ def monitor_signal(client,signal_list,coinpair_list):
                     if current_price<signal[1]['BUY_PRICE'] and current_price>signal[1]['last_buy_price']:
                         #place market order order
                         #print("inside sell condition")
-                        set_mode(client, signal[0], order_type)
-                        #print("isolated mode set")
                         #sleep(1)
-                        leverage = 3
-                        if models.StaticData.objects.exists():
-                            obj = models.StaticData.objects.get(static_id=1)
-                            leverage = int(obj.leverage)
-                            #print("leverage value ",type(leverage),leverage)
-                        set_leverage(client, signal[0], leverage) #+(loss_count*2)
-                        #print("leverage set")
-                        volume=4
-                        if models.StaticData.objects.exists():
-                            obj = models.StaticData.objects.get(static_id=1)
-                            volume = int(obj.volume)
-                        amount=volume*leverage #(+loss_count)
-                        #print("amount to be invested ",amount)
                         #print('Placing order for ', signal[0])
+                        amount = volume * leverage  # (+loss_count)
                         place_order(client,signal,amount)
                         print("order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage))
                         models.BotLogs(description="order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage)).save()
@@ -530,17 +530,17 @@ def monitor_signal(client,signal_list,coinpair_list):
                     if current_price > signal[1]['BUY_PRICE'] and current_price < signal[1]['last_buy_price']:
                         # place market order order
                         # print("inside buy condition")
-                        set_mode(client, signal[0], order_type)
-                        leverage = 3
-                        if models.StaticData.objects.exists():
-                            obj = models.StaticData.objects.get(static_id=1)
-                            leverage = int(obj.leverage)
-                        set_leverage(client, signal[0], leverage ) #+ loss_count
-                        # print("leverage set")
-                        volume = 4
-                        if models.StaticData.objects.exists():
-                            obj = models.StaticData.objects.get(static_id=1)
-                            volume = int(obj.volume)
+                        # set_mode(client, signal[0], order_type)
+                        # leverage = 3
+                        # if models.StaticData.objects.exists():
+                        #     obj = models.StaticData.objects.get(static_id=1)
+                        #     leverage = int(obj.leverage)
+                        # set_leverage(client, signal[0], leverage ) #+ loss_count
+                        # # print("leverage set")
+                        # volume = 4
+                        # if models.StaticData.objects.exists():
+                        #     obj = models.StaticData.objects.get(static_id=1)
+                        #     volume = int(obj.volume)
                         amount = volume * leverage #(+ loss_count)
                         # print('Placing order for ', signal[0])
                         place_order(client, signal, amount)
