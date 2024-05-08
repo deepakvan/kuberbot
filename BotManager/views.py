@@ -48,21 +48,22 @@ def bot():
                     pos = hf.get_pos(client)
                     print(f'You have {len(pos)} opened positions:\n{pos}')
                     models.BotLogs(description=f'You have {len(pos)} opened positions:\n{pos}').save()
-                    if len(pos)==0:
-                        ord = hf.check_orders(client)
-                        #print("working")
-                        #print(ord)
-                        # removing stop orders for closed positions
-                        for elem in ord:
-                            if not elem in pos:
-                                hf.close_open_orders(client,elem)
-                        if models.StaticData.objects.exists():
-                            obj = models.StaticData.objects.get(static_id=1)
-                            coinpair_list = [obj.crypto]
-                        print(coinpair_list)
-                        random.shuffle(coinpair_list)
-                        signal_list=[]
-                        for coinpair in coinpair_list:
+                    #if len(pos)==0:
+                    ord = hf.check_orders(client)
+                    #print("working")
+                    #print(ord)
+                    # removing stop orders for closed positions
+                    for elem in ord:
+                        if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
+                            hf.close_open_orders(client,elem)
+                    if models.StaticData.objects.exists():
+                        obj = models.StaticData.objects.get(static_id=1)
+                        coinpair_list = [x.upper().strip() for x in str(obj.crypto).split(",")] #[obj.crypto]
+                    print(coinpair_list)
+                    random.shuffle(coinpair_list)
+                    signal_list=[]
+                    for coinpair in coinpair_list:
+                        if not coinpair in pos:
                             df=hf.fetch_historical_data(client,coinpair,'15m',10)
                             #print(coinpair)
                             signal_data=hf.get_signal(df)
@@ -70,15 +71,15 @@ def bot():
                             if signal_data!=None:
                                 #print([coinpair,signal_data])
                                 signal_list.append([coinpair,signal_data])
-                        for sig in signal_list:
-                            print(sig)
-                            models.BotSignals(coinpair=sig[0],side=str(sig[1]["side"]),price=str(sig[1]["BUY_PRICE"])
-                                              ,sl=str(sig[1]["SL"]),tp=str(sig[1]["TP"])).save()
-                            models.BotLogs(description=f'signal  {sig} ').save()
-                        print("calling monitor")
-                        models.BotLogs(description="calling monitor").save()
-                        #hf.monitor_signal(client,signal_list,coinpair_list)
-                        threading.Thread(target=hf.monitor_signal, args=(client,signal_list,coinpair_list)).start()
+                    for sig in signal_list:
+                        print(sig)
+                        models.BotSignals(coinpair=sig[0],side=str(sig[1]["side"]),price=str(sig[1]["BUY_PRICE"])
+                                          ,sl=str(sig[1]["SL"]),tp=str(sig[1]["TP"])).save()
+                        models.BotLogs(description=f'signal  {sig} ').save()
+                    print("calling monitor")
+                    models.BotLogs(description="calling monitor").save()
+                    #hf.monitor_signal(client,signal_list,coinpair_list)
+                    threading.Thread(target=hf.monitor_signal, args=(client,signal_list,coinpair_list)).start()
 
                 #break # break while loop if needed
                 time.sleep(3*60)

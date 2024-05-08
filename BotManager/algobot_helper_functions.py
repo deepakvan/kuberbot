@@ -126,17 +126,17 @@ def remove_pending_orders_repeated(client):
                 sleep(60)
             pos = get_pos(client)
             #print(f'You have {len(pos)} opened positions:\n{pos}')
-            if len(pos) == 0:
-                #sleep(10)
-                ord = check_orders(client)
-                # print(ord)
-                # removing stop orders for closed positions
-                for elem in ord:
-                    #print("---for removing orders ",elem)
-                    if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
-                        print(elem, "order removed by pending order close function")
-                        sleep(1)
-                        close_open_orders(client, elem['symbol'])
+            #if len(pos) == 0:
+            #sleep(10)
+            ord = check_orders(client)
+            # print(ord)
+            # removing stop orders for closed positions
+            for elem in ord:
+                #print("---for removing orders ",elem)
+                if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
+                    print(elem, "order removed by pending order close function")
+                    sleep(1)
+                    close_open_orders(client, elem['symbol'])
             sleep(60)
         except ClientError as error:
             print(
@@ -468,15 +468,15 @@ def get_signal(df):
 
 def monitor_signal(client,signal_list,coinpair_list):
     print("----Monitor Signal")
-    isOrderPlaced=False
+    #isOrderPlaced=False
     models.BotLogs(description="----Monitor Signal").save()
     if len(signal_list)==0:
         print("no signal")
         models.BotLogs(description="no signal").save()
         return None
     pos = get_pos(client)
-    if len(pos) != 0:
-        return None
+    # if len(pos) != 0:
+    #     return None
     ord = check_orders(client)
     # print("old orders ",ord)
     # removing stop orders for closed positions
@@ -487,7 +487,9 @@ def monitor_signal(client,signal_list,coinpair_list):
     #print("recent losses",loss_count)
     leverage = 3
     volume = 4
+    ordersList=[]
     for signal in signal_list:
+        ordersList.append(signal[0])
         set_mode(client, signal[0], order_type)
         # print("isolated mode set")
         if models.StaticData.objects.exists():
@@ -499,48 +501,32 @@ def monitor_signal(client,signal_list,coinpair_list):
         if models.StaticData.objects.exists():
             obj = models.StaticData.objects.get(static_id=1)
             volume = int(obj.volume)
-
+    print("orders list -- ",ordersList)
     while True:
         try:
             minutes = datetime.datetime.now().minute
             seconds = datetime.datetime.now().second
             if minutes % 15 == 14 and seconds>=30 :
                 break
-            if isOrderPlaced:
+            if len(ordersList)==0:
                 break
             for signal in signal_list:
                 #print(signal)
                 current_price = float(client.ticker_price(signal[0])['price'])
                 #print("current price from ticker",current_price,type(current_price))
                 #condition for buy or sell then break
-                if signal[1]['side']=='sell':
+                if signal[1]['side']=='sell' and signal[0] in ordersList:
                     if current_price<signal[1]['BUY_PRICE'] and current_price>signal[1]['last_buy_price']:
-                        #place market order order
-                        #print("inside sell condition")
-                        #sleep(1)
-                        #print('Placing order for ', signal[0])
                         amount = volume * leverage  # (+loss_count)
                         place_order(client,signal,amount)
                         print("order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage))
                         models.BotLogs(description="order placed for {0} and total money invested {1}, leverage {2} ".format(signal[0],amount,leverage)).save()
-                        isOrderPlaced=True
-                        break
+                        ordersList.remove(signal[0])
+                        #isOrderPlaced=True
+                        #break
 
-                elif signal[1]['side'] == 'buy':
+                elif signal[1]['side'] == 'buy' and signal[0] in ordersList:
                     if current_price > signal[1]['BUY_PRICE'] and current_price < signal[1]['last_buy_price']:
-                        # place market order order
-                        # print("inside buy condition")
-                        # set_mode(client, signal[0], order_type)
-                        # leverage = 3
-                        # if models.StaticData.objects.exists():
-                        #     obj = models.StaticData.objects.get(static_id=1)
-                        #     leverage = int(obj.leverage)
-                        # set_leverage(client, signal[0], leverage ) #+ loss_count
-                        # # print("leverage set")
-                        # volume = 4
-                        # if models.StaticData.objects.exists():
-                        #     obj = models.StaticData.objects.get(static_id=1)
-                        #     volume = int(obj.volume)
                         amount = volume * leverage #(+ loss_count)
                         # print('Placing order for ', signal[0])
                         place_order(client, signal, amount)
@@ -549,8 +535,9 @@ def monitor_signal(client,signal_list,coinpair_list):
                         models.BotLogs(
                             description="order placed for {0} and total money invested {1}, leverage {2} ".format(
                                 signal[0], amount, leverage)).save()
-                        isOrderPlaced = True
-                        break
+                        ordersList.remove(signal[0])
+                        #isOrderPlaced = True
+                        #break
 
                 sleep(1)
         except ClientError as error:
