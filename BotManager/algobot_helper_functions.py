@@ -408,6 +408,13 @@ def get_signal(df):
                           (df['open'] > df['ema5']) and (df['close'] > df['ema5']) and \
                           (df['low'] <= df['ema5'])
 
+    TrendShootingStar = (df['open'] < df['low'] + halfCandleHeight) and (df['close']< df['low'] + halfCandleHeight) and \
+                        df['incr'] < -0.1
+
+    TrendHammer = (df['open'] > df['high'] - halfCandleHeight) and (df['close'] > df['high'] - halfCandleHeight) and \
+                  df['incr'] > 0.1
+
+
     price_precision = len(str(df['open']).split('.')[1])
     if len(str(df['high']).split('.')[1]) > price_precision:
         price_precision = len(str(df['high']).split('.')[1])
@@ -418,7 +425,7 @@ def get_signal(df):
 
     decimalpoint = float('0.'+'0'*(price_precision-1) + '1')
 
-    if isShootingStarTouchingEMA and df['incr']< -0.1:
+    if TrendShootingStar: #isShootingStarTouchingEMA and df['incr']< -0.1:
         SLTPRatio = 1.2  # 1:1.2
         # signal = 1
         BUY_PRICE = round(df['low']-decimalpoint, price_precision)
@@ -441,7 +448,7 @@ def get_signal(df):
         return trade
 
     # for long trade
-    elif isHammerTouchingEMA and df['incr']> 0.1:  #or isEmaBuy:
+    elif TrendHammer: #isHammerTouchingEMA and df['incr']> 0.1:  #or isEmaBuy:
         SLTPRatio = 1.2  # 1:1.2
         # signal = 1
         BUY_PRICE = round(df['high']+decimalpoint, price_precision) #df['high']
