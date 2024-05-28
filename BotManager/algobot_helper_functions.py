@@ -426,7 +426,7 @@ def get_signal(df):
     decimalpoint = float('0.'+'0'*(price_precision-1) + '1')
 
     if TrendShootingStar: #isShootingStarTouchingEMA and df['incr']< -0.1:
-        SLTPRatio = 1.2  # 1:1.2
+        SLTPRatio = 2  # 1:1.2
         # signal = 1
         BUY_PRICE = round(df['low']-decimalpoint, price_precision)
         BUY_PRICE_Trigger = round(df['low'], price_precision)
@@ -449,7 +449,7 @@ def get_signal(df):
 
     # for long trade
     elif TrendHammer: #isHammerTouchingEMA and df['incr']> 0.1:  #or isEmaBuy:
-        SLTPRatio = 1.2  # 1:1.2
+        SLTPRatio = 2  # 1:1.2
         # signal = 1
         BUY_PRICE = round(df['high']+decimalpoint, price_precision) #df['high']
         BUY_PRICE_Trigger = round(df['high'], price_precision)
