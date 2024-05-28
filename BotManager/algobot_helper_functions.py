@@ -133,7 +133,7 @@ def remove_pending_orders_repeated(client):
             # removing stop orders for closed positions
             for elem in ord:
                 #print("---for removing orders ",elem)
-                if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
+                if (not elem['symbol'] in pos):  #and (elem['type'] not in ['MARKET','LIMIT']):
                     print(elem, "order removed by pending order close function")
                     sleep(1)
                     close_open_orders(client, elem['symbol'])
@@ -424,6 +424,7 @@ def get_signal(df):
         price_precision = len(str(df['close']).split('.')[1])
 
     decimalpoint = float('0.'+'0'*(price_precision-1) + '1')
+    triggerdecimalpoint = float('0.' + '0' * (price_precision - 1) + '3')
 
     if TrendShootingStar: #isShootingStarTouchingEMA and df['incr']< -0.1:
         SLTPRatio = 2  # 1:1.2
@@ -433,7 +434,7 @@ def get_signal(df):
         SL = round(df['high']+decimalpoint, price_precision)
         SL_Trigger = SL #round(SL-((SL-BUY_PRICE)/2),price_precision)
         TP = round(BUY_PRICE - SLTPRatio * (SL - BUY_PRICE),price_precision)
-        TP_Trigger = round(TP+decimalpoint,price_precision) #round(TP+((BUY_PRICE-TP)/2),price_precision)
+        TP_Trigger = round(TP+triggerdecimalpoint,price_precision) #round(TP+((BUY_PRICE-TP)/2),price_precision)
         last_buy_price = round(BUY_PRICE - ((BUY_PRICE - TP) * 0.2), price_precision)
         Trailing_SL1 = round(BUY_PRICE-((BUY_PRICE - TP)*0.2), price_precision)
         Trailing_SL_Condition1 = round(BUY_PRICE - ((BUY_PRICE - TP) * 0.8), price_precision)
@@ -456,7 +457,7 @@ def get_signal(df):
         SL = round(df['low'] - decimalpoint, price_precision)  #df['low']
         SL_Trigger = SL  #round(SL + ((BUY_PRICE - SL) / 2), price_precision)
         TP = round(BUY_PRICE + SLTPRatio * (BUY_PRICE - SL),price_precision)
-        TP_Trigger = round(TP - decimalpoint, price_precision)
+        TP_Trigger = round(TP - triggerdecimalpoint, price_precision)
         last_buy_price = round(BUY_PRICE + ((TP - BUY_PRICE) * 0.2), price_precision)
         Trailing_SL1 = round(BUY_PRICE + ((TP - BUY_PRICE) * 0.2), price_precision)
         Trailing_SL_Condition1 = round(BUY_PRICE + ((TP - BUY_PRICE) * 0.8), price_precision)

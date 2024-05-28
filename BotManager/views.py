@@ -54,7 +54,7 @@ def bot():
                     #print(ord)
                     # removing stop orders for closed positions
                     for elem in ord:
-                        if (not elem['symbol'] in pos) and (elem['type'] not in ['MARKET','LIMIT']):
+                        if (not elem['symbol'] in pos):  # and (elem['type'] not in ['MARKET','LIMIT']):
                             hf.close_open_orders(client,elem)
                     if models.StaticData.objects.exists():
                         obj = models.StaticData.objects.get(static_id=1)
